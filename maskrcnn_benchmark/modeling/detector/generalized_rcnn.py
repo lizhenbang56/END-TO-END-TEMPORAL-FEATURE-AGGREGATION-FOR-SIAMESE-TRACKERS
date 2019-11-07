@@ -30,7 +30,7 @@ class GeneralizedRCNN(nn.Module):
         self.rpn = build_rpn(cfg, self.backbone.out_channels)
         self.roi_heads = build_roi_heads(cfg, self.backbone.out_channels)
 
-    def forward(self, images, targets=None):
+    def forward(self, template_images, template_targets, search_images, search_targets=None):
         """
         Arguments:
             images (list[Tensor] or ImageList): images to be processed
@@ -43,13 +43,17 @@ class GeneralizedRCNN(nn.Module):
                 like `scores`, `labels` and `mask` (for Mask R-CNN models).
 
         """
-        if self.training and targets is None:
+        if self.training and search_targets is None:
             raise ValueError("In training mode, targets should be passed")
-        images = to_image_list(images)
-        features = self.backbone(images.tensors)
-        proposals, proposal_losses = self.rpn(images, features, targets)
+        template_images = to_image_list(template_images)
+        template_features = self.backbone(template_images.tensors)
+        template_feature = template_features[-1]  # 7*7
+        search_images = to_image_list(search_images)
+        search_features = self.backbone(search_images.tensors)  # list of tensors
+        proposals, proposal_losses = self.rpn(template_images, template_feature, template_targets,
+                                              search_images, search_features, search_targets)
         if self.roi_heads:
-            x, result, detector_losses = self.roi_heads(features, proposals, targets)
+            x, result, detector_losses = self.roi_heads(template_feature, search_features, proposals, search_targets)
         else:
             # RPN-only models don't have roi_heads
             x = features

@@ -1,15 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 
 from .coco import COCODataset
-from .voc import PascalVOCDataset
+from .got10k import Got10kDataset
 from .concat_dataset import ConcatDataset
 from .abstract import AbstractDataset
-from .cityscapes import CityScapesDataset
 
 __all__ = [
     "COCODataset",
+    "Got10kDataset",
     "ConcatDataset",
-    "PascalVOCDataset",
     "AbstractDataset",
-    "CityScapesDataset",
 ]

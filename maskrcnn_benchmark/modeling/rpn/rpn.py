@@ -70,6 +70,23 @@ class RPNHeadFeatureSingleConv(nn.Module):
         return x
 
 
+def xcorr_depthwise(x, kernel):
+    """ depthwise cross correlation"""
+    batch = kernel.size(0)
+    channel = kernel.size(1)
+    x = x.view(1, batch*channel, x.size(2), x.size(3))
+    kernel = kernel.view(batch*channel, 1, kernel.size(2), kernel.size(3))
+    out = F.conv2d(x, kernel, groups=batch*channel)
+    out = out.view(batch, channel, out.size(2), out.size(3))
+    return out
+
+
+def l2_norm(input,axis=1):
+    norm = torch.norm(input,2,axis,True)
+    output = torch.div(input, norm)
+    return output
+
+
 @registry.RPN_HEADS.register("SingleConvRPNHead")
 class RPNHead(nn.Module):
     """
@@ -84,6 +101,7 @@ class RPNHead(nn.Module):
             num_anchors (int): number of anchors to be predicted
         """
         super(RPNHead, self).__init__()
+        self.cfg = cfg
         self.conv = nn.Conv2d(
             in_channels, in_channels, kernel_size=3, stride=1, padding=1
         )
@@ -96,11 +114,19 @@ class RPNHead(nn.Module):
             torch.nn.init.normal_(l.weight, std=0.01)
             torch.nn.init.constant_(l.bias, 0)
 
-    def forward(self, x):
+    def forward(self, object_x, search_x):
+        modulator_vector = F.avg_pool2d(object_x, (object_x.shape[2], object_x.shape[3]))
         logits = []
         bbox_reg = []
-        for feature in x:
-            t = F.relu(self.conv(feature))
+        for feature in search_x:
+            t = self.conv(feature)
+            # t = F.relu(self.conv(feature))
+            # print('stage1 merge前最大值：', torch.max(t))
+            # t = l2_norm(xcorr_depthwise(t, modulator_vector))
+            # t = xcorr_depthwise(l2_norm(t), l2_norm(modulator_vector))
+            t = F.relu(xcorr_depthwise(t, l2_norm(modulator_vector)))
+            # t = xcorr_depthwise(t, (modulator_vector)) / 1000
+            # print('stage1 merge后最大值：', torch.max(t))
             logits.append(self.cls_logits(t))
             bbox_reg.append(self.bbox_pred(t))
         return logits, bbox_reg
@@ -137,7 +163,8 @@ class RPNModule(torch.nn.Module):
         self.box_selector_test = box_selector_test
         self.loss_evaluator = loss_evaluator
 
-    def forward(self, images, features, targets=None):
+    def forward(self, template_images, object_features, template_targets,
+                search_images, search_features, search_targets=None):
         """
         Arguments:
             images (ImageList): images for which we want to compute the predictions
@@ -152,11 +179,11 @@ class RPNModule(torch.nn.Module):
             losses (dict[Tensor]): the losses for the model during training. During
                 testing, it is an empty dict.
         """
-        objectness, rpn_box_regression = self.head(features)
-        anchors = self.anchor_generator(images, features)
+        objectness, rpn_box_regression = self.head(object_features, search_features)
+        anchors = self.anchor_generator(search_images, search_features)
 
         if self.training:
-            return self._forward_train(anchors, objectness, rpn_box_regression, targets)
+            return self._forward_train(anchors, objectness, rpn_box_regression, search_targets)
         else:
             return self._forward_test(anchors, objectness, rpn_box_regression)
 

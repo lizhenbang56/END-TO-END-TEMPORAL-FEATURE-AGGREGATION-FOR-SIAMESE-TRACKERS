@@ -21,7 +21,7 @@ class ROIBoxHead(torch.nn.Module):
         self.post_processor = make_roi_box_post_processor(cfg)
         self.loss_evaluator = make_roi_box_loss_evaluator(cfg)
 
-    def forward(self, features, proposals, targets=None):
+    def forward(self, obj_feature, features, proposals, targets=None):
         """
         Arguments:
             features (list[Tensor]): feature-maps from possibly several levels
@@ -44,7 +44,7 @@ class ROIBoxHead(torch.nn.Module):
 
         # extract features that will be fed to the final classifier. The
         # feature_extractor generally corresponds to the pooler + heads
-        x = self.feature_extractor(features, proposals)
+        x = self.feature_extractor(obj_feature, features, proposals)
         # final classifier that converts the features into predictions
         class_logits, box_regression = self.predictor(x)
 

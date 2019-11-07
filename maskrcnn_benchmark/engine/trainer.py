@@ -69,19 +69,21 @@ def do_train(
         iou_types = iou_types + ("keypoints",)
     dataset_names = cfg.DATASETS.TEST
 
-    for iteration, (images, targets, _) in enumerate(data_loader, start_iter):
-        
-        if any(len(target) < 1 for target in targets):
-            logger.error(f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for target in targets]}" )
+    for iteration, data in enumerate(data_loader, start_iter):
+        template_images, template_targets, _, search_images, search_targets, _ = data
+        if any(len(target) < 1 for target in search_targets):
+            logger.error(f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for target in search_targets]}" )
             continue
         data_time = time.time() - end
         iteration = iteration + 1
         arguments["iteration"] = iteration
 
-        images = images.to(device)
-        targets = [target.to(device) for target in targets]
+        template_images = template_images.to(device)
+        template_targets = [target.to(device) for target in template_targets]
+        search_images = search_images.to(device)
+        search_targets = [target.to(device) for target in search_targets]
 
-        loss_dict = model(images, targets)
+        loss_dict = model(template_images, template_targets, search_images, search_targets)
 
         losses = sum(loss for loss in loss_dict.values())
 

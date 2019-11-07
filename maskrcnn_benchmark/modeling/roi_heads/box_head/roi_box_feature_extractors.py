@@ -46,6 +46,12 @@ class ResNet50Conv5ROIFeatureExtractor(nn.Module):
         return x
 
 
+def l2_norm(input,axis=1):
+    norm = torch.norm(input,2,axis,True)
+    output = torch.div(input, norm)
+    return output
+
+
 @registry.ROI_BOX_FEATURE_EXTRACTORS.register("FPN2MLPFeatureExtractor")
 class FPN2MLPFeatureExtractor(nn.Module):
     """
@@ -71,8 +77,21 @@ class FPN2MLPFeatureExtractor(nn.Module):
         self.fc7 = make_fc(representation_size, representation_size, use_gn)
         self.out_channels = representation_size
 
-    def forward(self, x, proposals):
-        x = self.pooler(x, proposals)
+    def forward(self, obj_x, x, proposals):
+        x = self.pooler(x, proposals)  # x的顺序与proposals的顺序一致。即按图像顺序排列。
+        '''把x按照图片拆成若干块。'''
+        # print('state2 merge前最大值：', torch.max(x))
+        split_list = [proposal.bbox.shape[0] for proposal in proposals]
+        x_split = torch.split(x, split_list)
+        x_merge = []
+        for i in range(len(x_split)):
+            # x_merge.append(torch.sub(x_split[i], obj_x[i]))
+            # x_merge.append(torch.mul(l2_norm(x_split[i]), l2_norm(obj_x[i].unsqueeze(0))))
+            x_merge.append(torch.mul(x_split[i], l2_norm(obj_x[i].unsqueeze(0))))
+            # x_merge.append(l2_norm(torch.mul(x_split[i], obj_x[i])))
+            # x_merge.append(torch.mul(x_split[i], (obj_x[i].unsqueeze(0)))/1000)
+        x = torch.cat(x_merge)
+        # print('stage2 merge后最大值：', torch.max(x))
         x = x.view(x.size(0), -1)
 
         x = F.relu(self.fc6(x))
