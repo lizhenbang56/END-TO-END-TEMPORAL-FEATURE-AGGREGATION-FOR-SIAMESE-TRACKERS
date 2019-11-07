@@ -107,7 +107,7 @@ def main():
             print(video, flush=True)
         run_per_video(model, video)
 
-#TODO 为什么没有-1？
+
 def track_per_video(video_name):
     print(video_name)
     json_path = os.path.join(root, video_name+'.json')
@@ -119,7 +119,6 @@ def track_per_video(video_name):
     times = np.zeros(frame_num)
     i = 0
     for img_name, proposals_ in proposal_dict.items():
-        img_name = imgs[i]
         start_time = time.time()
         if img_name == '00000001.jpg':
             gt = proposals_[0][:-1]
@@ -139,6 +138,8 @@ def track_per_video(video_name):
         scores_ = []
         if max(scores) < 0.7: # 若没有大于0.7的，则找得分最高的。
             selected_id = torch.argmax(torch.Tensor(scores))
+        elif sum(np.array(scores)>0.7) == 1:  # 若只有一个大于阈值的，则直接选那个
+            selected_id = np.where(np.array(scores)>0.7)[0][0]
         else:
             for score in scores:
                 if score > 0.7:  # 多个候选框，卡IoU
@@ -190,7 +191,7 @@ if __name__ == '__main__':
     video_root = '/home/zhbli/Dataset/data2/got10k/test'
     config_file = 'configs/e2e_faster_rcnn_R_50_FPN_1x.yaml'
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start", type=int, default=2)
+    parser.add_argument("--start", type=int, default=1)
     parser.add_argument("--end", type=int, default=180)
     args = parser.parse_args()
     # main()
