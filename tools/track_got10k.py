@@ -49,7 +49,7 @@ def get_tracking_result(last_box, proposals):
 
 
 def visualization(is_first, video_name, img_name, predictions):
-    save_dir = '/tmp/4/{}'.format(video_name)
+    save_dir = os.path.join(cfg.OUTPUT_DIR, 'visualization', video_name)
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     save_path = os.path.join(save_dir, img_name)
@@ -106,11 +106,11 @@ def run_per_video(model, video_name):
             else:
                 boxes[i] = get_tracking_result(boxes[i-1], proposals)
             '''保存可视化结果'''
-            # visualization(is_first, video_name, img_name, predictions)
+            visualization(is_first, video_name, img_name, predictions)
         times[i] = time.time() - start_time
     '''保存该帧跟踪结果'''
     record_file = os.path.join(
-        '/tmp', 'siamrcnn2', video_name,
+        cfg.OUTPUT_DIR, 'result', video_name,
         '%s_%03d.txt' % (video_name, 1))
     record_dir = os.path.dirname(record_file)
     if not os.path.isdir(record_dir):
@@ -132,7 +132,6 @@ def run_per_video(model, video_name):
 def main():
     """"""
     '''创建网络'''
-    cfg.merge_from_file(config_file)
     model = COCODemo(
         cfg,
         min_image_size=800,
@@ -154,9 +153,10 @@ def main():
 if __name__ == '__main__':
     '''定义全局变量'''
     video_root = '/home/zhbli/Dataset/data2/got10k/test'
-    config_file = 'configs/e2e_faster_rcnn_R_50_FPN_1x.yaml'
+    config_file = 'experiments/got10k_v3/e2e_faster_rcnn_R_50_FPN_1x.yaml'
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start", type=int, default=98)
-    parser.add_argument("--end", type=int, default=99)
+    parser.add_argument("--start", type=int, default=1)
+    parser.add_argument("--end", type=int, default=180)
     args = parser.parse_args()
+    cfg.merge_from_file(config_file)
     main()
