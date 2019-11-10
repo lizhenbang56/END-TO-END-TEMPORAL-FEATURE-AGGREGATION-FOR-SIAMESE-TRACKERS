@@ -89,7 +89,6 @@ def run_per_video(model, video_name):
 def main():
     """"""
     '''创建网络'''
-    cfg.merge_from_file(config_file)
     model = COCODemo(
         cfg,
         min_image_size=800,
@@ -136,15 +135,15 @@ def track_per_video(video_name):
         last_box = BoxList(last_box, (-1,-1), mode="xywh").convert("xyxy")
         overlaps = boxlist_iou(proposals, last_box).squeeze()
         scores_ = []
-        if max(scores) < 0.7: # 若没有大于0.7的，则找得分最高的。
+        if max(scores) < threshold: # 若没有大于threshold的，则找得分最高的。
             selected_id = torch.argmax(torch.Tensor(scores))
-        elif sum(np.array(scores)>0.7) == 1:  # 若只有一个大于阈值的，则直接选那个
-            selected_id = np.where(np.array(scores)>0.7)[0][0]
+        elif sum(np.array(scores)>threshold) == 1:  # 若只有一个大于阈值的，则直接选那个
+            selected_id = np.where(np.array(scores)>threshold)[0][0]
         else:
             for score in scores:
-                if score > 0.7:  # 多个候选框，卡IoU
+                if score > threshold:  # 多个候选框，卡IoU
                     scores_.append(1)  # 若小于阈值则按overlap比。因为是相乘。
-                elif 0 <= score <= 0.7:
+                elif 0 <= score <= threshold:
                     scores_.append(0)  # 多个候选框，卡IoU
                 elif score == -1:
                     scores_.append(-1)
@@ -161,7 +160,7 @@ def track_per_video(video_name):
         i += 1
     '''保存该帧跟踪结果'''
     record_file = os.path.join(
-        'experiments/got10k_v2/result', video_name,
+        'experiments/got10k_v2/result/{}'.format(str(threshold)), video_name,
         '%s_%03d.txt' % (video_name, 1))
     record_dir = os.path.dirname(record_file)
     if not os.path.isdir(record_dir):
@@ -175,7 +174,7 @@ def track_per_video(video_name):
 
 def track_proposals():
     global root
-    root = os.path.join(os.path.join('experiments/got10k_v2/', 'proposals'))
+    root = os.path.join(os.path.join(cfg.OUTPUT_DIR, 'proposals'))
     videos = sorted(os.listdir(root))
     for video in videos:
         video_name = video.split('.')[0]
@@ -188,11 +187,13 @@ def track_proposals():
 
 if __name__ == '__main__':
     '''定义全局变量'''
+    threshold = 0.8
     video_root = '/home/zhbli/Dataset/data2/got10k/test'
-    config_file = 'configs/e2e_faster_rcnn_R_50_FPN_1x.yaml'
+    config_file = 'experiments/got10k_v2/e2e_faster_rcnn_R_50_FPN_1x.yaml'
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", type=int, default=1)
     parser.add_argument("--end", type=int, default=180)
     args = parser.parse_args()
+    cfg.merge_from_file(config_file)
     # main()
     track_proposals()
