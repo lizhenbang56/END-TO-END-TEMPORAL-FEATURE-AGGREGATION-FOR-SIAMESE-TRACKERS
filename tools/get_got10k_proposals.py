@@ -79,7 +79,7 @@ def run_per_video(model, video_name):
                 predictions, proposals = re_track(model, video_dir, imgs[i-1], boxes[i-1], image)
             '''获得跟踪结果'''
             save_proposals(proposal_dict, proposals, img_name)
-    save_dir = os.path.join('experiments/got10k_v2/', 'proposals')
+    save_dir = os.path.join(cfg.OUTPUT_DIR, 'proposals')
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
     save_path = os.path.join(save_dir, video_name + '.json')
@@ -159,8 +159,8 @@ def track_per_video(video_name):
         times[i] = time.time() - start_time
         i += 1
     '''保存该帧跟踪结果'''
-    record_file = os.path.join(
-        'experiments/got10k_v2/result/{}'.format(str(threshold)), video_name,
+    record_file = os.path.join(cfg.OUTPUT_DIR,
+        'result/{}'.format(str(threshold)), video_name,
         '%s_%03d.txt' % (video_name, 1))
     record_dir = os.path.dirname(record_file)
     if not os.path.isdir(record_dir):
@@ -187,9 +187,9 @@ def track_proposals():
 
 if __name__ == '__main__':
     '''定义全局变量'''
-    threshold = 0.8
+    threshold = 0.85
     video_root = '/home/zhbli/Dataset/data2/got10k/test'
-    config_file = 'experiments/got10k_v2/e2e_faster_rcnn_R_50_FPN_1x.yaml'
+    config_file = 'experiments/got10k_v3/e2e_faster_rcnn_R_50_FPN_1x.yaml'
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", type=int, default=1)
     parser.add_argument("--end", type=int, default=180)
