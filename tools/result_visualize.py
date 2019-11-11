@@ -1,3 +1,5 @@
+"""根据proposals得到可视化的结果视频"""
+
 import os, cv2, glob, json
 import numpy as np
 
@@ -11,6 +13,7 @@ def run_per_image(anno, img_path, proposals_):
             x1, y1, w1, h1 = [int(i) for i in proposal]
             img = cv2.rectangle(img, (x1, y1), (x1 + w1, y1 + h1), (255, 0, 0), 2)
             img = cv2.putText(img, str('%.02f'%score), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, .5, (255, 255, 255), 2)
+            img = cv2.putText(img, str('%.02f'%score), (x1, y1+h1), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 0), 2)
     img = cv2.rectangle(img, (x, y), (x + w, y + h), (0, 255, 255), 2)
     height, width, layers = img.shape
     size = (width, height)
@@ -32,7 +35,7 @@ def run_per_video(video_name):
         proposals = proposal_dict[img_name]
         img, size = run_per_image(anno, img, proposals)
         img_array.append(img)
-    save_path = os.path.join('/tmp/5', video_name + '.avi')
+    save_path = os.path.join('/tmp/7', video_name + '.avi')
     out = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'DIVX'), 15, size)
 
     for i in range(len(img_array)):
@@ -45,12 +48,18 @@ def main():
     for video_name in video_root:
         if 'GOT' not in video_name:
             continue
+        if single_video is not None:
+            if video_name != single_video:
+                continue
         print(video_name)
         run_per_video(video_name)
 
 
 if __name__ == '__main__':
     img_root = '/home/zhbli/Dataset/data2/got10k/test'
-    anno_root = '/home/etvuz/project3/siamrcnn2/experiments/got10k_v2/result'
-    proposals_root = '/home/etvuz/project3/siamrcnn2/experiments/got10k_v2/proposals'
+    root = '/home/etvuz/project3/siamrcnn2/experiments/got10k_v3'
+    thresh = 0.9
+    single_video = 'GOT-10k_Test_000015'
+    anno_root = os.path.join(root, 'result', str(thresh))
+    proposals_root = os.path.join(root, 'proposals')
     main()
