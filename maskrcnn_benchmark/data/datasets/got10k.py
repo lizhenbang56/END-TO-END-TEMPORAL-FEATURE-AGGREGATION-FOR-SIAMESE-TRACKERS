@@ -19,6 +19,43 @@ def process_template(img, box):
     return img, box
 
 
+def data_augment(box, img):
+    img_w, img_h = img.size
+    x, y, w, h = box
+    can_pad = np.array([False, False, False, False]) # pad_left, pad_right, pad_top, pad_down = [False, False, False, False]
+    '''计算要扩增的边界'''
+    left = x - w
+    right = x + 2*w
+    top = y - h
+    down = y + 2*h
+    if left > 0: can_pad[0] = True  # pad_left = True
+    if right < img_w: can_pad[1] = True  # pad_right = True
+    if top > 0: can_pad[2] = True  # pad_top = True
+    if down < img_h: can_pad[3] = True  # pad_down = True
+
+    if random.random() > 0.5 and any(can_pad):
+        patch = img.crop((int(x), int(y), int(x+w), int(y+h)))
+        new_boxes =[[left, y, w, h],
+                  [x+w, y, w, h],
+                  [x, top, w, h],
+                  [x, y+h, w, h]]
+        pad_id = random.choice(np.where(can_pad)[0])
+        new_box = np.array(new_boxes[pad_id])
+        n_x1, n_y1, n_w, n_h = [int(i) for i in new_box]
+        img.paste(patch, (n_x1, n_y1))
+        box = torch.from_numpy(np.stack((box, new_box)))
+        target = BoxList(box, img.size, mode="xywh").convert("xyxy")
+        target.add_field("labels", torch.Tensor([1, 1]).long())
+    else:
+        box = torch.from_numpy(box).reshape(1, 4)
+        target = BoxList(box, img.size, mode="xywh").convert("xyxy")
+        target.add_field("labels", torch.Tensor([1]).long())
+    return img, target
+
+
+
+
+
 class Got10kDataset(torch.utils.data.Dataset):
     def __init__(self, root, transforms, template_transforms):
         self.root = root
@@ -76,9 +113,12 @@ class Got10kDataset(torch.utils.data.Dataset):
         '''对于target，裁剪并缩放'''
         if is_template:
             img, gt = process_template(img, gt)
-        box = torch.from_numpy(gt).reshape(1, 4)
-        target = BoxList(box, img.size, mode="xywh").convert("xyxy")
-        target.add_field("labels", torch.Tensor([1]).long())
+        if not is_template:
+            img, target = data_augment(gt, img)
+        else:
+            box = torch.from_numpy(gt).reshape(1, 4)
+            target = BoxList(box, img.size, mode="xywh").convert("xyxy")
+            target.add_field("labels", torch.Tensor([1]).long())
 
         '''进行clip_to_image/transform'''
         target = target.clip_to_image(remove_empty=True)
