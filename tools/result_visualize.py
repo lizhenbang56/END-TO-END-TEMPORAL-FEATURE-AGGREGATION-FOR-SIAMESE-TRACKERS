@@ -57,9 +57,9 @@ def main():
 
 if __name__ == '__main__':
     img_root = '/home/zhbli/Dataset/data2/got10k/test'
-    root = '/home/etvuz/project3/siamrcnn2/experiments/got10k_v3'
+    root = '/home/etvuz/project3/siamrcnn2/experiments/got10k_v8'
     thresh = 0.9
-    single_video = 'GOT-10k_Test_000015'
+    single_video = 'GOT-10k_Test_000101'
     anno_root = os.path.join(root, 'result', str(thresh))
     proposals_root = os.path.join(root, 'proposals')
     main()

@@ -65,9 +65,10 @@ class Got10kDataset(torch.utils.data.Dataset):
             self.videos = f.read().splitlines()
 
         '''排除错误视频'''
-        with open(os.path.join(self.root, 'error_list.txt')) as f:
-            error_videos = f.read().splitlines()
-        self.videos = list(set(self.videos) - set(error_videos))
+        if 'train' in root:
+            with open(os.path.join(self.root, 'error_list.txt')) as f:
+                error_videos = f.read().splitlines()
+            self.videos = list(set(self.videos) - set(error_videos))
 
     def __getitem__(self, item):
         """"""
@@ -76,26 +77,33 @@ class Got10kDataset(torch.utils.data.Dataset):
         video_path = os.path.join(self.root, video_name)
 
         '''读入该视频的gt/cover/absence/cut_by_image信息'''
-        gts = np.loadtxt(os.path.join(video_path, 'groundtruth.txt'), delimiter=',')  # [?, 4] [xmin，ymin，width，height]
-        cover = np.loadtxt(os.path.join(video_path, 'cover.label'))  # 0~8 九个数
-        absence = np.loadtxt(os.path.join(video_path, 'absence.label'))  # 0：目标存在。1：目标消失
-        # cut_by_image = np.loadtxt(os.path.join(video_path, 'cut_by_image.label'))
-        # 不能根据cut_by_image来过滤图像。因为很常见，而且往往整段视频都相同，如果把所有图片都过滤掉则会报错。
+        if 'test' in self.root:
+            gts = [np.loadtxt(os.path.join(video_path, 'groundtruth.txt'), delimiter=',')]  # [?, 4] [xmin，ymin，width，height]
+        else:
+            gts = np.loadtxt(os.path.join(video_path, 'groundtruth.txt'), delimiter=',')  # [?, 4] [xmin，ymin，width，height]
+            cover = np.loadtxt(os.path.join(video_path, 'cover.label'))  # 0~8 九个数
+            absence = np.loadtxt(os.path.join(video_path, 'absence.label'))  # 0：目标存在。1：目标消失
+            # cut_by_image = np.loadtxt(os.path.join(video_path, 'cut_by_image.label'))
+            # 不能根据cut_by_image来过滤图像。因为很常见，而且往往整段视频都相同，如果把所有图片都过滤掉则会报错。
 
-        '''筛选图像'''
-        choice_bool = (absence == 0) & (cover > 3)
-        choice_ids = np.where(choice_bool)[0]  # np vector
+            '''筛选图像'''
+            choice_bool = (absence == 0) & (cover > 3)
+            choice_ids = np.where(choice_bool)[0]  # np vector
 
-        '''当所有图像都被过滤掉时，进行特殊处理'''
-        if len(choice_ids) == 0:
-            choice_bool = (absence == 0)  # 降低要求。只要有目标就行。
-            choice_ids = np.where(choice_bool)[0]
-        if len(choice_ids) == 0:
-            assert False
+            '''当所有图像都被过滤掉时，进行特殊处理'''
+            if len(choice_ids) == 0:
+                choice_bool = (absence == 0)  # 降低要求。只要有目标就行。
+                choice_ids = np.where(choice_bool)[0]
+            if len(choice_ids) == 0:
+                assert False
 
         '''从可用图像中随机选择两张图像'''
-        template_gt_id = random.choice(choice_ids)
-        search_gt_id = random.choice(choice_ids)
+        if 'test' in self.root:
+            template_gt_id = 0
+            search_gt_id = 0
+        else:
+            template_gt_id = random.choice(choice_ids)
+            search_gt_id = random.choice(choice_ids)
         template_img, template_target = self.getitem1(video_path, gts, template_gt_id, is_template=True)
         search_img, search_target = self.getitem1(video_path, gts, search_gt_id)
 
@@ -113,12 +121,10 @@ class Got10kDataset(torch.utils.data.Dataset):
         '''对于target，裁剪并缩放'''
         if is_template:
             img, gt = process_template(img, gt)
-        if not is_template:
-            img, target = data_augment(gt, img)
-        else:
-            box = torch.from_numpy(gt).reshape(1, 4)
-            target = BoxList(box, img.size, mode="xywh").convert("xyxy")
-            target.add_field("labels", torch.Tensor([1]).long())
+
+        box = torch.from_numpy(gt).reshape(1, 4)
+        target = BoxList(box, img.size, mode="xywh").convert("xyxy")
+        target.add_field("labels", torch.Tensor([1]).long())
 
         '''进行clip_to_image/transform'''
         target = target.clip_to_image(remove_empty=True)

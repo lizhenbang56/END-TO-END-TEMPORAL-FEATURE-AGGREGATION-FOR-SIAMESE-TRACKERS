@@ -12,6 +12,9 @@ class DatasetCatalog(object):
         },
         "got10k_val": {
             "data_dir": "got10k/val"
+        },
+        "got10k_test": {
+            "data_dir": "got10k/test"
         }
     }
 

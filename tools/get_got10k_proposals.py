@@ -187,9 +187,9 @@ def track_proposals():
 
 if __name__ == '__main__':
     '''定义全局变量'''
-    threshold = 0.85
+    threshold = 0.9
     video_root = '/home/zhbli/Dataset/data2/got10k/test'
-    config_file = 'experiments/got10k_v3/e2e_faster_rcnn_R_50_FPN_1x.yaml'
+    config_file = 'experiments/got10k_v6/e2e_faster_rcnn_R_50_FPN_1x.yaml'
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", type=int, default=1)
     parser.add_argument("--end", type=int, default=180)

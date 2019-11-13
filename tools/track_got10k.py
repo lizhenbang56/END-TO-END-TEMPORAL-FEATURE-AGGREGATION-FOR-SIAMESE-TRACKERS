@@ -153,10 +153,10 @@ def main():
 if __name__ == '__main__':
     '''定义全局变量'''
     video_root = '/home/zhbli/Dataset/data2/got10k/test'
-    config_file = 'experiments/got10k_v3/e2e_faster_rcnn_R_50_FPN_1x.yaml'
+    config_file = 'experiments/got10k_v9/e2e_faster_rcnn_R_50_FPN_1x.yaml'
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start", type=int, default=1)
-    parser.add_argument("--end", type=int, default=180)
+    parser.add_argument("--start", type=int, default=101)
+    parser.add_argument("--end", type=int, default=101)
     args = parser.parse_args()
     cfg.merge_from_file(config_file)
     main()
