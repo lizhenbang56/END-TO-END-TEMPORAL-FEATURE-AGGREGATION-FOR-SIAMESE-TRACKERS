@@ -1,7 +1,8 @@
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.engine.predictor import COCODemo
-from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
+from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou, boxlist_nms
 from maskrcnn_benchmark.structures.bounding_box import BoxList
+from maskrcnn_benchmark.layers import nms as box_nms
 
 from PIL import Image
 import numpy as np
@@ -106,6 +107,24 @@ def main():
             print(video, flush=True)
         run_per_video(model, video)
 
+def visualization(video_name, img_name, proposals, res, last_box):
+    img_path = os.path.join(video_root, video_name, img_name)
+    save_dir = os.path.join(cfg.OUTPUT_DIR, 'visualization_nms', video_name)
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    save_path = os.path.join(save_dir, img_name)
+    image = cv2.imread(img_path)
+    for proposal in proposals:
+        x, y, w, h = [int(i) for i in proposal]
+        image = cv2.rectangle(
+            image, (x,y), (x+w,y+h), (0,0,255), 1
+        )
+    x, y, w, h = [int(i) for i in res]
+    image = cv2.rectangle(image, (x,y), (x+w,y+h), (255,0,0), 1)
+    x, y, w, h = [int(i) for i in last_box]
+    image = cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 1)
+    cv2.imwrite(save_path, image)
+
 
 def track_per_video(video_name):
     print(video_name)
@@ -129,38 +148,33 @@ def track_per_video(video_name):
             continue
         proposals = [proposal[:-1] for proposal in proposals_]
         scores = [proposal[-1] for proposal in proposals_]
+        scores = torch.Tensor(scores)
         proposals = torch.Tensor(proposals)
         proposals = BoxList(proposals, (-1,-1), mode="xywh").convert("xyxy")
-        last_box = torch.Tensor(boxes[i-1]).reshape(1, 4)
-        last_box = BoxList(last_box, (-1,-1), mode="xywh").convert("xyxy")
-        overlaps = boxlist_iou(proposals, last_box).squeeze()
-        scores_ = []
-        if max(scores) < threshold: # 若没有大于threshold的，则找得分最高的。
-            selected_id = torch.argmax(torch.Tensor(scores))
-        elif sum(np.array(scores)>threshold) == 1:  # 若只有一个大于阈值的，则直接选那个
-            selected_id = np.where(np.array(scores)>threshold)[0][0]
-        else:
-            for score in scores:
-                if score > threshold:  # 多个候选框，卡IoU
-                    scores_.append(1)  # 若小于阈值则按overlap比。因为是相乘。
-                elif 0 <= score <= threshold:
-                    scores_.append(0)  # 多个候选框，卡IoU
-                elif score == -1:
-                    scores_.append(-1)
-                else:
-                    assert False
-            selected_id = torch.argmax(overlaps*torch.Tensor(scores_))
-        if scores[selected_id] == -1:
-            boxes[i] = boxes[i-1]
-        else:
-            proposals = proposals.convert("xywh")
-            res_box = proposals.bbox[selected_id].cpu().numpy()
-            boxes[i] = res_box
+        proposals.add_field('objectness', scores)
+        '''对proposals执行nms，保留top_n个样本。'''
+        proposals_nms = boxlist_nms(
+            proposals,
+            0.1,
+            max_proposals=10,
+            score_field="objectness",
+        )
+        last_box = torch.Tensor(boxes[i - 1]).reshape(1, 4)
+        last_box = BoxList(last_box, (-1, -1), mode="xywh").convert("xyxy")
+        overlaps = boxlist_iou(proposals_nms, last_box).squeeze(0)
+        selected_id = torch.argmax(overlaps)
+        if overlaps[selected_id] == 0:
+            print('消失')
+            selected_id = torch.argmax(proposals_nms.extra_fields['objectness'])
+        proposals_nms = proposals_nms.convert("xywh")
+        res_box = proposals_nms.bbox[selected_id].cpu().numpy()
+        boxes[i] = res_box
+        visualization(video_name, img_name, proposals_nms.bbox, res_box, boxes[i - 1])
         times[i] = time.time() - start_time
         i += 1
     '''保存该帧跟踪结果'''
     record_file = os.path.join(cfg.OUTPUT_DIR,
-        'result/{}'.format(str(threshold)), video_name,
+        'result/nms', video_name,
         '%s_%03d.txt' % (video_name, 1))
     record_dir = os.path.dirname(record_file)
     if not os.path.isdir(record_dir):
@@ -192,11 +206,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", type=int, default=1)
     parser.add_argument("--end", type=int, default=180)
-    parser.add_argument("--threshold", type=float, default=0.7)
-    parser.add_argument("--output_dir", default=None)
+    # parser.add_argument("--threshold", type=float, default=0.7)
+    parser.add_argument("--output_dir", default='/home/etvuz/project3/siamrcnn2/experiments_backup/got10k_v9/95000')
     args = parser.parse_args()
     cfg.merge_from_file(config_file)
-    threshold = args.threshold
+    # threshold = args.threshold
     if args.output_dir is not None:
         cfg.OUTPUT_DIR = args.output_dir
     # main()
