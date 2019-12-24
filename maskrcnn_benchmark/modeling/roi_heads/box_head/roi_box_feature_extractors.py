@@ -77,7 +77,7 @@ class FPN2MLPFeatureExtractor(nn.Module):
         self.fc7 = make_fc(representation_size, representation_size, use_gn)
         self.out_channels = representation_size
 
-    def forward(self, obj_x, x, proposals):
+    def forward1(self, obj_x, x, proposals):
         x = self.pooler(x, proposals)  # x的顺序与proposals的顺序一致。即按图像顺序排列。
         '''把x按照图片拆成若干块。'''
         # print('state2 merge前最大值：', torch.max(x))
@@ -91,12 +91,12 @@ class FPN2MLPFeatureExtractor(nn.Module):
             # x_merge.append(l2_norm(torch.mul(x_split[i], obj_x[i])))
             # x_merge.append(torch.mul(x_split[i], (obj_x[i].unsqueeze(0)))/1000)
         x = torch.cat(x_merge)
-        # print('stage2 merge后最大值：', torch.max(x))
-        x = x.view(x.size(0), -1)
+        return x
 
+    def forward2(self, x):
+        x = x.view(x.size(0), -1)
         x = F.relu(self.fc6(x))
         x = F.relu(self.fc7(x))
-
         return x
 
 
@@ -155,9 +155,12 @@ class FPNXconv1fcFeatureExtractor(nn.Module):
         self.fc6 = make_fc(input_size, representation_size, use_gn=False)
         self.out_channels = representation_size
 
-    def forward(self, x, proposals):
+    def forward1(self, x, proposals):
         x = self.pooler(x, proposals)
         x = self.xconvs(x)
+        return x
+
+    def forward2(self, x):
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc6(x))
         return x

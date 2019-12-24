@@ -41,20 +41,26 @@ class FPNPredictor(nn.Module):
         self.cls_score = nn.Linear(representation_size, num_classes)
         num_bbox_reg_classes = 2 if cfg.MODEL.CLS_AGNOSTIC_BBOX_REG else num_classes
         self.bbox_pred = nn.Linear(representation_size, num_bbox_reg_classes * 4)
+        self.drop_size = representation_size
 
         nn.init.normal_(self.cls_score.weight, std=0.01)
         nn.init.normal_(self.bbox_pred.weight, std=0.001)
         for l in [self.cls_score, self.bbox_pred]:
             nn.init.constant_(l.bias, 0)
 
-    def forward(self, x):
+    def forward_cls(self, x, mask=None):
         if x.ndimension() == 4:
             assert list(x.shape[2:]) == [1, 1]
             x = x.view(x.size(0), -1)
         scores = self.cls_score(x)
-        bbox_deltas = self.bbox_pred(x)
+        return scores
 
-        return scores, bbox_deltas
+    def forward_reg(self, x):
+        if x.ndimension() == 4:
+            assert list(x.shape[2:]) == [1, 1]
+            x = x.view(x.size(0), -1)
+        bbox_deltas = self.bbox_pred(x)
+        return bbox_deltas
 
 
 def make_roi_box_predictor(cfg, in_channels):

@@ -23,6 +23,7 @@ from maskrcnn_benchmark.utils.comm import synchronize, get_rank
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir, save_config
+from maskrcnn_benchmark.modeling.DTA.vat import VirtualAdversarialPerturbationGenerator
 
 # See if we can use apex.DistributedDataParallel instead of the torch default,
 # and enable mixed-precision via apex.amp
@@ -39,6 +40,7 @@ def train(cfg, local_rank, distributed):
 
     optimizer = make_optimizer(cfg, model)
     scheduler = make_lr_scheduler(cfg, optimizer)
+    model.roi_heads.box.optimizers = optimizer
 
     # Initialize mixed-precision training
     use_mixed_precision = cfg.DTYPE == "float16"

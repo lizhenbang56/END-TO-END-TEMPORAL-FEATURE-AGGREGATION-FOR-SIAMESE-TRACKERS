@@ -153,10 +153,16 @@ def main():
 if __name__ == '__main__':
     '''定义全局变量'''
     video_root = '/home/zhbli/Dataset/data2/got10k/test'
-    config_file = 'experiments/got10k_v9/e2e_faster_rcnn_R_50_FPN_1x.yaml'
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start", type=int, default=101)
-    parser.add_argument("--end", type=int, default=101)
+    parser.add_argument("--start", type=int, default=1)
+    parser.add_argument("--end", type=int, default=180)
+    parser.add_argument("--config_file", type=str)
+    parser.add_argument("--gpu", type=str)
+    parser.add_argument("--output_dir", type=str)
+    parser.add_argument("--weight", type=str)
     args = parser.parse_args()
-    cfg.merge_from_file(config_file)
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    cfg.merge_from_file(args.config_file)
+    cfg.OUTPUT_DIR = args.output_dir
+    cfg.WEIGHT = args.weight
     main()
