@@ -70,14 +70,16 @@ def run_per_video(model, video_name):
         frame_path = os.path.join(video_dir, img_name)
         pil_image = Image.open(frame_path).convert("RGB")
         if is_first:
+            last_image = np.array(pil_image)[:, :, [2, 1, 0]]
             pil_image, dummy_targets = process_template(pil_image, gt)
             first_img = np.array(pil_image)[:, :, [2, 1, 0]]
         else:
             image = np.array(pil_image)[:, :, [2, 1, 0]]
-            predictions, proposals = model.run_on_opencv_image(first_img, dummy_targets, image)
+            predictions, proposals = model.run_on_opencv_image(first_img, [dummy_targets, dummy_targets], [last_image, image])
+            last_image = image
             '''若无检测结果则利用上一帧重新检测（特殊情况是物体出画面，重检也捡不到）'''
-            if predictions is None:
-                predictions, proposals = re_track(model, video_dir, imgs[i-1], boxes[i-1], image)
+            # if predictions is None:
+            #     predictions, proposals = re_track(model, video_dir, imgs[i-1], boxes[i-1], image)
             '''获得跟踪结果'''
             save_proposals(proposal_dict, proposals, img_name)
     save_dir = os.path.join(cfg.OUTPUT_DIR, 'proposals')
@@ -169,12 +171,12 @@ def track_per_video(video_name):
         proposals_nms = proposals_nms.convert("xywh")
         res_box = proposals_nms.bbox[selected_id].cpu().numpy()
         boxes[i] = res_box
-        visualization(video_name, img_name, proposals_nms.bbox, res_box, boxes[i - 1])
+        # visualization(video_name, img_name, proposals_nms.bbox, res_box, boxes[i - 1])
         times[i] = time.time() - start_time
         i += 1
     '''保存该帧跟踪结果'''
     record_file = os.path.join(cfg.OUTPUT_DIR,
-        'result/nms', video_name,
+        'result', video_name,
         '%s_%03d.txt' % (video_name, 1))
     record_dir = os.path.dirname(record_file)
     if not os.path.isdir(record_dir):
@@ -202,16 +204,26 @@ def track_proposals():
 if __name__ == '__main__':
     '''定义全局变量'''
     video_root = '/home/zhbli/Dataset/data2/got10k/test'
-    config_file = 'experiments/got10k_v9/e2e_faster_rcnn_R_50_FPN_1x.yaml'
     parser = argparse.ArgumentParser()
     parser.add_argument("--start", type=int, default=1)
     parser.add_argument("--end", type=int, default=180)
     # parser.add_argument("--threshold", type=float, default=0.7)
-    parser.add_argument("--output_dir", default='/home/etvuz/project3/siamrcnn2/experiments_backup/got10k_v9/95000')
+    parser.add_argument("--output_dir", type=str)
+    parser.add_argument("--weight", type=str)
+    parser.add_argument("--gpu", type=str)
+    parser.add_argument("--config_file", type=str)
+    parser.add_argument("--phase", type=str)
+    parser.add_argument("--epoch", type=int)
     args = parser.parse_args()
-    cfg.merge_from_file(config_file)
+    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+    cfg.merge_from_file(args.config_file)
     # threshold = args.threshold
     if args.output_dir is not None:
         cfg.OUTPUT_DIR = args.output_dir
-    # main()
-    track_proposals()
+    cfg.MODEL.WEIGHT = args.weight
+    if args.phase == 'run_model':
+        main()
+    elif args.phase == 'gen_result':
+        track_proposals()
+    else:
+        assert False

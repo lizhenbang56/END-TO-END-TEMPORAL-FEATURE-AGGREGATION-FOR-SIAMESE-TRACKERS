@@ -80,22 +80,27 @@ class Got10kDataset(torch.utils.data.Dataset):
         if 'test' in self.root:
             gts = [np.loadtxt(os.path.join(video_path, 'groundtruth.txt'), delimiter=',')]  # [?, 4] [xmin，ymin，width，height]
         else:
-            gts = np.loadtxt(os.path.join(video_path, 'groundtruth.txt'), delimiter=',')  # [?, 4] [xmin，ymin，width，height]
-            cover = np.loadtxt(os.path.join(video_path, 'cover.label'))  # 0~8 九个数
-            absence = np.loadtxt(os.path.join(video_path, 'absence.label'))  # 0：目标存在。1：目标消失
-            # cut_by_image = np.loadtxt(os.path.join(video_path, 'cut_by_image.label'))
-            # 不能根据cut_by_image来过滤图像。因为很常见，而且往往整段视频都相同，如果把所有图片都过滤掉则会报错。
-
-            '''筛选图像'''
-            choice_bool = (absence == 0) & (cover > 3)
-            choice_ids = np.where(choice_bool)[0]  # np vector
-
-            '''当所有图像都被过滤掉时，进行特殊处理'''
-            if len(choice_ids) == 0:
-                choice_bool = (absence == 0)  # 降低要求。只要有目标就行。
-                choice_ids = np.where(choice_bool)[0]
-            if len(choice_ids) == 0:
+            gts = np.loadtxt(os.path.join(video_path, 'groundtruth.txt'),
+                             delimiter=',')  # [?, 4] [xmin，ymin，width，height]
+            if 'MapEditor' in self.root:
                 assert False
+                choice_ids = list(range(0, len(gts)))
+            else:
+                cover = np.loadtxt(os.path.join(video_path, 'cover.label'))  # 0~8 九个数
+                absence = np.loadtxt(os.path.join(video_path, 'absence.label'))  # 0：目标存在。1：目标消失
+                # cut_by_image = np.loadtxt(os.path.join(video_path, 'cut_by_image.label'))
+                # 不能根据cut_by_image来过滤图像。因为很常见，而且往往整段视频都相同，如果把所有图片都过滤掉则会报错。
+
+                '''筛选图像'''
+                choice_bool = (absence == 0) & (cover > 3)
+                choice_ids = np.where(choice_bool)[0]  # np vector
+
+                '''当所有图像都被过滤掉时，进行特殊处理'''
+                if len(choice_ids) == 0:
+                    choice_bool = (absence == 0)  # 降低要求。只要有目标就行。
+                    choice_ids = np.where(choice_bool)[0]
+                if len(choice_ids) == 0:
+                    assert False
 
         '''从可用图像中随机选择两张图像'''
         if 'test' in self.root:
@@ -106,9 +111,25 @@ class Got10kDataset(torch.utils.data.Dataset):
             search_gt_id = random.choice(choice_ids)
         template_img, template_target = self.getitem1(video_path, gts, template_gt_id, is_template=True)
         search_img, search_target = self.getitem1(video_path, gts, search_gt_id)
+        '''生成相邻帧'''
+        if 'test' not in self.root:
+            if template_gt_id > 0:
+                template_gt_id1 = template_gt_id - 1
+            else:
+                template_gt_id1 = template_gt_id + 1
+            if search_gt_id > 0:
+                search_gt_id1 = search_gt_id - 1
+            else:
+                search_gt_id1 = search_gt_id + 1
+        else:
+            template_gt_id1 = 0
+            search_gt_id1 = 0
+        template_img1, template_target1 = self.getitem1(video_path, gts, template_gt_id1, is_template=True)
+        search_img1, search_target1 = self.getitem1(video_path, gts, search_gt_id1)
 
         '''返回'''
-        return template_img, template_target, template_gt_id, search_img, search_target, search_gt_id
+        return [(template_img, template_target, template_gt_id, search_img, search_target, search_gt_id),
+                (template_img1, template_target1, template_gt_id1, search_img1, search_target1, search_gt_id1)]
 
     def __len__(self):
         return len(self.videos)
@@ -116,7 +137,10 @@ class Got10kDataset(torch.utils.data.Dataset):
     def getitem1(self, video_path, gts, gt_id, is_template=False):
         img_id = gt_id + 1  # 易错：gt与图像的对应关系：gt从第0行开始，而图像编号从1开始。
         gt = gts[gt_id]  # np vector, (4,) xywh
-        img_path = os.path.join(video_path, '%08d.jpg' % img_id)
+        if 'MapEditor' in self.root:
+            img_path = os.path.join(video_path, '%06d.jpg' % gt_id)  # 注意，gta数据集的图像编号是从0开始的。
+        else:
+            img_path = os.path.join(video_path, '%08d.jpg' % img_id)
         img = Image.open(img_path).convert('RGB')
         '''对于target，裁剪并缩放'''
         if is_template:

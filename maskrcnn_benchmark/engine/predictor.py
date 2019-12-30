@@ -163,7 +163,7 @@ class COCODemo(object):
         top_predictions = self.select_top_predictions(predictions)
         if len(top_predictions) == 0:
             return None, None
-        result = image.copy()
+        result = image[1].copy()
         if self.show_mask_heatmaps:
             return self.create_mask_montage(result, top_predictions)
         result = self.overlay_boxes(result, top_predictions)
@@ -186,11 +186,12 @@ class COCODemo(object):
         """
         # apply pre-processing to image
         target_image = self.target_transforms(first_img)
-        image = self.transforms(original_image)
+        last_image = self.transforms(original_image[0])
+        current_image = self.transforms(original_image[1])
         # convert to an ImageList, padded so that it is divisible by
         # cfg.DATALOADER.SIZE_DIVISIBILITY
-        target_image_list = to_image_list(target_image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
-        image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
+        target_image_list = to_image_list([target_image, target_image], self.cfg.DATALOADER.SIZE_DIVISIBILITY)
+        image_list = to_image_list([last_image, current_image], self.cfg.DATALOADER.SIZE_DIVISIBILITY)
         target_image_list = target_image_list.to(self.device)
         image_list = image_list.to(self.device)
         # compute predictions
@@ -199,10 +200,10 @@ class COCODemo(object):
         predictions = [o.to(self.cpu_device) for o in predictions]
 
         # always single image is passed at a time
-        prediction = predictions[0]
+        prediction = predictions[1]
 
         # reshape prediction (a BoxList) into the original image size
-        height, width = original_image.shape[:-1]
+        height, width = original_image[1].shape[:-1]
         prediction = prediction.resize((width, height))
 
         if prediction.has_field("mask"):

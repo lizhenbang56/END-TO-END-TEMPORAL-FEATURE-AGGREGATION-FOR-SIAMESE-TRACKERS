@@ -15,6 +15,9 @@ class DatasetCatalog(object):
         },
         "got10k_test": {
             "data_dir": "got10k/test"
+        },
+        "gta_got10k": {
+            "data_dir": "/home/zhbli/Dataset/data3/MapEditor_output_got10k"
         }
     }
 

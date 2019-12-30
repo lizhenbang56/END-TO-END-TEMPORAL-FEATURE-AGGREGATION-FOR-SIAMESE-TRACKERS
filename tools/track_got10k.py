@@ -92,14 +92,17 @@ def run_per_video(model, video_name):
         start_time = time.time()
         if is_first:
             # visualization(is_first, video_name, img_name, (pil_image, gt))
+            last_image = np.array(pil_image)[:, :, [2, 1, 0]]
             pil_image, dummy_targets = process_template(pil_image, gt)
             first_img = np.array(pil_image)[:, :, [2, 1, 0]]
         else:
             image = np.array(pil_image)[:, :, [2, 1, 0]]
-            predictions, proposals = model.run_on_opencv_image(first_img, dummy_targets, image)
+            predictions, proposals = model.run_on_opencv_image(first_img, [dummy_targets, dummy_targets], [last_image, image])
+            last_image = image
             '''若无检测结果则利用上一帧重新检测（特殊情况是物体出画面，重检也捡不到）'''
             if predictions is None:
-                predictions, proposals = re_track(model, video_dir, imgs[i-1], boxes[i-1], image)
+                print('no obj')
+                # predictions, proposals = re_track(model, video_dir, imgs[i-1], boxes[i-1], image)
             '''获得跟踪结果'''
             if predictions is None:  # 这是两次都没检测到的情况
                 boxes[i] = boxes[i-1]
@@ -164,5 +167,5 @@ if __name__ == '__main__':
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
     cfg.merge_from_file(args.config_file)
     cfg.OUTPUT_DIR = args.output_dir
-    cfg.WEIGHT = args.weight
+    cfg.MODEL.WEIGHT = args.weight
     main()

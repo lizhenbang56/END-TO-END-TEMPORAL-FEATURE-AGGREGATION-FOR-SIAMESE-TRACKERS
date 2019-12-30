@@ -25,6 +25,10 @@ def build_resnet_backbone(cfg):
 @registry.BACKBONES.register("R-152-FPN")
 def build_resnet_fpn_backbone(cfg):
     body = resnet.ResNet(cfg)
+    if cfg.MODEL.IS_SHIFT:
+        print('Adding temporal shift...')
+        from maskrcnn_benchmark.modeling.TSM.temporal_shift import make_temporal_shift
+        make_temporal_shift(net=body, n_segment=2, n_div=8, place='blockres', temporal_pool=False)
     in_channels_stage2 = cfg.MODEL.RESNETS.RES2_OUT_CHANNELS
     out_channels = cfg.MODEL.RESNETS.BACKBONE_OUT_CHANNELS
     fpn = fpn_module.FPN(
