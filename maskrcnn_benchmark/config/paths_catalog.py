@@ -18,6 +18,9 @@ class DatasetCatalog(object):
         },
         "gta_got10k": {
             "data_dir": "/home/zhbli/Dataset/data3/MapEditor_output_got10k"
+        },
+        "uav20l": {
+            "data_dir": "/home/zhbli/Dataset/data1/UAV123/data_seq/UAV20L"
         }
     }
 
@@ -31,6 +34,16 @@ class DatasetCatalog(object):
             )
             return dict(
                 factory="Got10kDataset",
+                args=args,
+            )
+        elif "uav" in name:
+            data_dir = DatasetCatalog.DATA_DIR
+            attrs = DatasetCatalog.DATASETS[name]
+            args = dict(
+                root=os.path.join(data_dir, attrs["data_dir"]),
+            )
+            return dict(
+                factory="Uav20lDataset",
                 args=args,
             )
         raise RuntimeError("Dataset not available: {}".format(name))
