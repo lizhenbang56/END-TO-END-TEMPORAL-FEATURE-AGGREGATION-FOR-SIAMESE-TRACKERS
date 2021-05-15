@@ -1,10 +1,5 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-r"""
-Basic training script for PyTorch
-"""
-
-# Set up custom environment before nearly anything else is imported
-# NOTE: this should be the first import (no not reorder)
+import sys
+sys.path.append('/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS')
 from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 
 import argparse
@@ -100,7 +95,7 @@ def main():
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Training")
     parser.add_argument(
         "--config-file",
-        default="configs/e2e_faster_rcnn_R_50_FPN_1x.yaml",
+        default="/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml",
         metavar="FILE",
         help="path to config file",
         type=str,
@@ -118,8 +113,10 @@ def main():
         default=None,
         nargs=argparse.REMAINDER,
     )
+    parser.add_argument('--gpus', type=str, default='2')
 
     args = parser.parse_args()
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
 
     num_gpus = int(os.environ["WORLD_SIZE"]) if "WORLD_SIZE" in os.environ else 1
     args.distributed = num_gpus > 1
