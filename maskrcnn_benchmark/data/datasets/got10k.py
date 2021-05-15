@@ -1,4 +1,4 @@
-import torch, os, random
+import torch, os, random, cv2
 import torch.utils.data
 import numpy as np
 from PIL import Image
@@ -13,11 +13,20 @@ def process_template(img, box):
     template_size = 400
     x, y, w, h = box
     '''裁剪图像'''
-    img = img.crop((x, y, x+w, y+h))
+    img = img.crop((x, y, x+w, y+h))  # im.crop((left, top, right, bottom))
     img = img.resize((template_size, template_size))
     box = np.array([0,0,template_size,template_size])
     return img, box
 
+
+def visualize_data(img, is_template):
+    print('vis_data')
+    img = (img.numpy() + 127).astype(np.uint8).transpose(1,2,0)
+    if is_template:
+        assert cv2.imwrite('/tmp/td.jpg', img)
+    else:
+        assert cv2.imwrite('/tmp/sd.jpg', img)
+    return
 
 class Got10kDataset(torch.utils.data.Dataset):
     def __init__(self, root, transforms, template_transforms):
@@ -57,22 +66,31 @@ class Got10kDataset(torch.utils.data.Dataset):
             assert False
 
         '''从可用图像中随机选择两张图像'''
-        template_gt_id = random.choice(choice_ids)
-        search_gt_id = random.choice(choice_ids)
-        template_img, template_target = self.getitem1(video_path, gts, template_gt_id, is_template=True)
-        search_img, search_target = self.getitem1(video_path, gts, search_gt_id)
+        image_id = random.choice(choice_ids)
+        
+        # 随机设定边框 0~1
+        rand_w = random.uniform(0.01, 0.99)
+        rand_h = random.uniform(max(0.01, rand_w / 8.0), min(0.99, rand_w * 8.0))
+        rand_x1 = random.uniform(0, 1-rand_w)
+        rand_y1 = random.uniform(0, 1-rand_h)
+        gt = [rand_x1, rand_y1, rand_w, rand_h]
+        
+        template_img, template_target = self.getitem1(video_path, gt, image_id, is_template=True)  # gts: xywh
+        search_img, search_target = self.getitem1(video_path, gt, image_id)
+        '''从可用图像中随机选择两张图像'''
 
         '''返回'''
-        return template_img, template_target, template_gt_id, search_img, search_target, search_gt_id
+        return template_img, template_target, image_id, search_img, search_target, image_id
 
     def __len__(self):
         return len(self.videos)
 
-    def getitem1(self, video_path, gts, gt_id, is_template=False):
+    def getitem1(self, video_path, gt, gt_id, is_template=False):
         img_id = gt_id + 1  # 易错：gt与图像的对应关系：gt从第0行开始，而图像编号从1开始。
-        gt = gts[gt_id]  # np vector, (4,) xywh
+        gt_01 = np.asarray(gt)  # np vector, (4,) xywh
         img_path = os.path.join(video_path, '%08d.jpg' % img_id)
         img = Image.open(img_path).convert('RGB')
+        gt = gt_01 * [img.width, img.height, img.width, img.height]
         '''对于target，裁剪并缩放'''
         if is_template:
             img, gt = process_template(img, gt)
@@ -88,7 +106,7 @@ class Got10kDataset(torch.utils.data.Dataset):
             if is_template:
                 img, target = self._template_transforms(img, target)
             else:
-                img, target = self._transforms(img, target)
+                img, target = self._transforms(img, target)        
         return img, target
 
 
