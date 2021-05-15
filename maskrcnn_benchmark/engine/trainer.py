@@ -1,9 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
+import cv2
 import datetime
 import logging
 import os
 import time
-
+import numpy as np
 import torch
 import torch.distributed as dist
 from tqdm import tqdm
@@ -40,6 +40,16 @@ def reduce_loss_dict(loss_dict):
     return reduced_losses
 
 
+def visualize_train(data):
+    print('vis')
+    template_images, template_targets, _, search_images, search_targets, _ = data
+    template_image = (template_images.tensors[0].data.cpu().numpy() + 127).astype(np.uint8).transpose(1,2,0)
+    search_image = (search_images.tensors[0].data.cpu().numpy() + 127).astype(np.uint8).transpose(1,2,0)
+    assert cv2.imwrite('/tmp/s.jpg', search_image)
+    assert cv2.imwrite('/tmp/t.jpg', template_image)
+    return
+
+
 def do_train(
     cfg,
     model,
@@ -71,6 +81,8 @@ def do_train(
 
     for iteration, data in enumerate(data_loader, start_iter):
         template_images, template_targets, _, search_images, search_targets, _ = data
+        # with torch.no_grad():
+        #     visualize_train(data)
         if any(len(target) < 1 for target in search_targets):
             logger.error(f"Iteration={iteration + 1} || Image Ids used for training {_} || targets Length={[len(target) for target in search_targets]}" )
             continue
@@ -176,6 +188,11 @@ def do_train(
             )
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
+
+        """删除变量"""
+        del template_images, template_targets, search_images, search_targets
+        del data
+        """删除变量"""
 
     total_training_time = time.time() - start_training_time
     total_time_str = str(datetime.timedelta(seconds=total_training_time))
