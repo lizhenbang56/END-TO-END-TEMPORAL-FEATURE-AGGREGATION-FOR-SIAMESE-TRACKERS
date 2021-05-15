@@ -133,6 +133,7 @@ def main():
     """"""
     '''创建网络'''
     cfg.merge_from_file(config_file)
+    cfg.MODEL.WEIGHT = '/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/model_0005000.pth'
     model = COCODemo(
         cfg,
         min_image_size=800,
@@ -154,9 +155,9 @@ def main():
 if __name__ == '__main__':
     '''定义全局变量'''
     video_root = '/home/zhbli/Dataset/data2/got10k/test'
-    config_file = 'configs/e2e_faster_rcnn_R_50_FPN_1x.yaml'
+    config_file = '/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml'
     parser = argparse.ArgumentParser()
-    parser.add_argument("--start", type=int, default=98)
-    parser.add_argument("--end", type=int, default=99)
+    parser.add_argument("--start", type=int, default=1)
+    parser.add_argument("--end", type=int, default=180)
     args = parser.parse_args()
     main()
