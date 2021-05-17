@@ -1,5 +1,6 @@
 import sys
-sys.path.append('/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS')
+# sys.path.append('/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS')  # etvuz@172.18.32.31
+sys.path.append('/home/yyshi/zhbli/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS')  # yyshi@172.18.32.157
 from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 
 import argparse
@@ -95,7 +96,8 @@ def main():
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Training")
     parser.add_argument(
         "--config-file",
-        default="/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml",
+        # default="/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml",  # etvuz@172.18.32.31
+        default="/home/yyshi/zhbli/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml",  # yyshi@172.18.32.157
         metavar="FILE",
         help="path to config file",
         type=str,
