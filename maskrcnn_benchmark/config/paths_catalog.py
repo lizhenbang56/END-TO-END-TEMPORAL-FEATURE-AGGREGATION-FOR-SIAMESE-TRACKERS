@@ -5,7 +5,8 @@ import os
 from copy import deepcopy
 
 class DatasetCatalog(object):
-    DATA_DIR = "/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/datasets"
+    # DATA_DIR = "/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/datasets"  # etvuz@172.18.32.31
+    DATA_DIR = "/home/yyshi/zhbli/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/datasets"  # yyshi@172.18.32.157
     DATASETS = {
         "got10k_train": {
             "data_dir": "got10k/train"
