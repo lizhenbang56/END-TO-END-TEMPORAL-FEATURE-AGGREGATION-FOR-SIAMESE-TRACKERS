@@ -8,6 +8,25 @@ import numpy as np
 import cv2, os, glob, argparse, torch, time
 
 
+'''定义全局变量'''
+# etvuz@172.18.32.31
+# video_root = '/home/zhbli/Dataset/data2/got10k/test'
+# config_file = '/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml'
+# weight_path = '/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/model_0005000.pth'
+
+# yyshi@172.18.32.157
+video_root = '/home/yyshi/zhbli/dataset/got10k/test'
+config_file = '/home/yyshi/zhbli/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml'
+weight_path = '/home/yyshi/zhbli/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/snapshots/no_projection/model_final.pth'
+
+# 传入参数
+parser = argparse.ArgumentParser()
+parser.add_argument("--start", type=int, default=1)
+parser.add_argument("--end", type=int, default=180)
+parser.add_argument('--j', type=int, default=8)
+args = parser.parse_args()
+'''定义全局变量'''
+
 def process_template(img, box):
     """
     img: PIL Image
@@ -70,6 +89,12 @@ def run_per_video(model, video_name):
     跟踪一段视频
     frame_paths: list, 该段视频中所有帧的路径
     """
+    record_file = os.path.join(
+        '/tmp', 'siamrcnn2', video_name,
+        '%s_%03d.txt' % (video_name, 1))
+    if os.path.exists(record_file):
+        print('existing, continue')
+        return
     global_start = time.time()
     global first_img, dummy_targets
     video_dir = os.path.join(video_root, video_name)
@@ -109,9 +134,6 @@ def run_per_video(model, video_name):
             # visualization(is_first, video_name, img_name, predictions)
         times[i] = time.time() - start_time
     '''保存该帧跟踪结果'''
-    record_file = os.path.join(
-        '/tmp', 'siamrcnn2', video_name,
-        '%s_%03d.txt' % (video_name, 1))
     record_dir = os.path.dirname(record_file)
     if not os.path.isdir(record_dir):
         os.makedirs(record_dir)
@@ -129,7 +151,7 @@ def run_per_video(model, video_name):
     global_time = (time.time()-global_start)/frame_num
     print(('%.3f'%global_time)+'秒每帧')
 
-def main():
+def main(start_, end_):
     """"""
     '''创建网络'''
     cfg.merge_from_file(config_file)
@@ -145,7 +167,7 @@ def main():
     print('start tracking')
     for video in videos:
         video_id = int(video.split('_')[-1])
-        if video_id < args.start or video_id > args.end:
+        if video_id < start_ or video_id > end_:
             continue
         else:
             print(video, end=' ', flush=True)
@@ -153,15 +175,14 @@ def main():
 
 
 if __name__ == '__main__':
-    '''定义全局变量'''
-    # video_root = '/home/zhbli/Dataset/data2/got10k/test'
-    # config_file = '/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml'
-    # weight_path = '/home/etvuz/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/model_0005000.pth'
-    video_root = '/home/yyshi/zhbli/dataset/got10k/test'
-    config_file = '/home/yyshi/zhbli/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/configs/e2e_faster_rcnn_R_50_FPN_1x.yaml'
-    weight_path = '/home/yyshi/zhbli/projects/self_supervised_tracking/END-TO-END-TEMPORAL-FEATURE-AGGREGATION-FOR-SIAMESE-TRACKERS/snapshots/no_projection/model_final.pth'
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--start", type=int, default=1)
-    parser.add_argument("--end", type=int, default=180)
-    args = parser.parse_args()
-    main()
+    length = 180 // args.j
+    for i in range(args.j):
+        start = i * length + 1
+        if i == args.j-1:
+            end = 180
+        else:
+            end = (i+1) * length
+        gpu_id = i % 8
+        cmd = "CUDA_VISIBLE_DEVICES={} python -c 'from track_got10k import main; print(main({}, {}))' &".format(gpu_id, start, end)
+        print(cmd)
+        os.system(cmd)
