@@ -41,8 +41,9 @@ def main():
 
 
 if __name__ == '__main__':
-    img_root = '/home/zhbli/Dataset/data2/got10k/test'
-    single_video = 'GOT-10k_Test_000098'
+    # img_root = '/home/zhbli/Dataset/data2/got10k/test'
+    img_root = '/home/yyshi/zhbli/dataset/got10k/test'
+    single_video = 'GOT-10k_Test_000004'
     anno_root = '/tmp/siamrcnn2'
     save_root = os.path.join(anno_root, 'visualization_video')
     if not os.path.exists(save_root):
