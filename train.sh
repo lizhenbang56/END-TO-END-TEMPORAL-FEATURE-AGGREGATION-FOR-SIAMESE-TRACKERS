@@ -1,5 +1,6 @@
-gpus=0,1,3
-NGPUS=3
+source activate py37-pytorch1.4
+gpus=0,1,2,3,4,5,6,7
+NGPUS=8
 images_per_gpu=3
 FPN_POST_NMS_TOP_N_TRAIN=$[images_per_gpu*1000]
 IMS_PER_BATCH=$[NGPUS*images_per_gpu]
